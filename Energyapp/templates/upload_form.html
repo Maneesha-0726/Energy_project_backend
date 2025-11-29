@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YOLO Image Upload</title>
+    <style>
+        body { font-family: Arial; padding: 30px; }
+        .prediction-box {
+            background: #f1f1f1;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+        }
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .btn-blue { background: #1e40af; color: white; }
+        .btn-green { background: #059669; color: white; }
+    </style>
+</head>
+<body>
+
+    <h2>Upload Image</h2>
+
+    <form id="uploadForm" enctype="multipart/form-data">
+        <input type="file" name="greyImage" required />
+        <br><br>
+        <button class="btn btn-blue" type="submit">Submit</button>
+    </form>
+
+    <hr>
+
+    <div id="result" style="display:none;">
+        <h3>YOLO Detection Complete!</h3>
+
+        <h4>Predictions:</h4>
+        <div id="predictions"></div>
+
+        <br>
+        <a id="downloadBtn" class="btn btn-green" href="#" download>Download Output Image</a>
+    </div>
+
+    <script>
+        document.getElementById("uploadForm").addEventListener("submit", function(e) {
+            e.preventDefault();
+
+            let formData = new FormData(this);
+
+            fetch("", {
+                method: "POST",
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById("result").style.display = "block";
+
+                // SET DOWNLOAD BUTTON URL
+                document.getElementById("downloadBtn").href = data.download_url;
+
+                // SHOW PREDICTIONS
+                let predDiv = document.getElementById("predictions");
+                predDiv.innerHTML = "";
+
+                data.predictions.forEach(p => {
+                    predDiv.innerHTML += `
+                        <div class="prediction-box">
+                            <b>Label:</b> ${p.label} <br>
+                            <b>Confidence:</b> ${(p.confidence * 100).toFixed(2)}% <br>
+                            <b>Box:</b> (${p.box[0]}, ${p.box[1]}, ${p.box[2]}, ${p.box[3]})
+                        </div>
+                    `;
+                });
+            })
+            .catch(err => alert("Error: " + err));
+        });
+    </script>
+
+</body>
+</html>
