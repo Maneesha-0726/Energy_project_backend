@@ -3,5 +3,4 @@ from .views import Index
 
 urlpatterns = [
     path("", Index.as_view(), name="index"),
-    path("analyze/", Index.as_view(), name="analyze"),
 ]
