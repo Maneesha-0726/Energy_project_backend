@@ -11,7 +11,6 @@ import os
 
 from .models import GrayscaleImage, YOLOOutput, PanelAnalysis, FaultDetail
 
-
 # ---------------- ENERGY LOSS CONSTANTS ----------------
 FAULT_LOSS = {
     "Non-Defective": 0.00,
@@ -21,7 +20,6 @@ FAULT_LOSS = {
     "Physical Damage": 0.40,
     "Electrical-Damage": 0.55,
 }
-
 
 # ---------------- LABEL NORMALIZATION ----------------
 def normalize(lbl):
@@ -40,6 +38,21 @@ def normalize(lbl):
     return mapping.get(lbl, lbl.title())
 
 
+# ---------------- LOAD YOLO MODELS ONCE ----------------
+from ultralytics import YOLO
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+
+print("⚡ Loading YOLO models ONCE at startup...")
+
+best_model = YOLO(os.path.join(MODEL_DIR, "best.pt"))
+snow_model = YOLO(os.path.join(MODEL_DIR, "snow.pt"))
+panel_model = YOLO(os.path.join(MODEL_DIR, "panel_detect.pt"))
+
+print("✅ YOLO Models Loaded Successfully!")
+
+
 # ---------------- CLASS VIEW ----------------
 @method_decorator(csrf_exempt, name='dispatch')
 class Index(View):
@@ -48,15 +61,7 @@ class Index(View):
         return JsonResponse({"status": "Backend is live"}, status=200)
 
     def post(self, request):
-        from ultralytics import YOLO
-
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        MODEL_DIR = os.path.join(BASE_DIR, "models")
-
-        # LOAD MODELS
-        best_model = YOLO(os.path.join(MODEL_DIR, "best.pt"))
-        snow_model = YOLO(os.path.join(MODEL_DIR, "snow.pt"))
-        panel_model = YOLO(os.path.join(MODEL_DIR, "panel_detect.pt"))
+        global best_model, snow_model, panel_model
 
         # USER INPUTS
         location = request.POST.get("location", "Home")
@@ -105,7 +110,6 @@ class Index(View):
                 conf = float(b.conf[0])
                 box = list(map(int, b.xyxy[0].tolist()))
                 detections.append((lbl, conf, box))
-
             final_res = snow_res
         else:
             final_res = best_res
