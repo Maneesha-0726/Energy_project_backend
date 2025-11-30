@@ -5,24 +5,17 @@ from django.core.files.base import ContentFile
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
-from Energyapp.models import GrayscaleImage, YOLOOutput, PanelAnalysis, FaultDetail
-
 from PIL import Image
 import uuid
 import io
 import os
 
-# ==============================
-#  LOAD YOLO LAZILY (IMPORTANT)
-# ==============================
-best_model = None
-snow_model = None
-panel_model = None
-
-from ultralytics import YOLO
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_DIR = os.path.join(BASE_DIR, "models")
+from .models import (
+    GrayscaleImage,
+    YOLOOutput,
+    PanelAnalysis,
+    FaultDetail
+)
 
 # ---------------- ENERGY LOSS CONSTANTS ----------------
 FAULT_LOSS = {
@@ -33,7 +26,6 @@ FAULT_LOSS = {
     "Physical Damage": 0.40,
     "Electrical-Damage": 0.55,
 }
-
 
 # ---------------- LABEL NORMALIZATION ----------------
 def normalize(lbl):
@@ -52,6 +44,18 @@ def normalize(lbl):
     return mapping.get(lbl, lbl.title())
 
 
+# ---------------- LAZY LOAD YOLO MODELS ----------------
+from ultralytics import YOLO
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_DIR = os.path.join(BASE_DIR, "models")
+
+# DO NOT load models here — this crashes Render
+best_model = None
+snow_model = None
+panel_model = None
+
+
 # ---------------- MAIN BACKEND VIEW ----------------
 @method_decorator(csrf_exempt, name='dispatch')
 class Index(View):
@@ -62,16 +66,17 @@ class Index(View):
     def post(self, request):
         global best_model, snow_model, panel_model
 
-        # ======================================
-        #  LAZY LOAD MODELS (Fix Render crash)
-        # ======================================
+        # ---------------- LAZY LOAD MODELS ----------------
         if best_model is None:
+            print("Loading best.pt...")
             best_model = YOLO(os.path.join(MODEL_DIR, "best.pt"))
 
         if snow_model is None:
+            print("Loading snow.pt...")
             snow_model = YOLO(os.path.join(MODEL_DIR, "snow.pt"))
 
         if panel_model is None:
+            print("Loading panel_detect.pt...")
             panel_model = YOLO(os.path.join(MODEL_DIR, "panel_detect.pt"))
 
         # -------------- READ USER INPUT --------------
@@ -131,7 +136,7 @@ class Index(View):
         panels = [list(map(int, b.xyxy[0].tolist())) for b in panel_res.boxes]
 
         if not panels:
-            panels = [(0, 0, img_w, img_h)]  # fallback: whole image is one panel
+            panels = [(0, 0, img_w, img_h)]  # fallback: 1 full image panel
 
         total_daily_loss = 0
         panel_analysis_list = []
@@ -157,7 +162,6 @@ class Index(View):
                 iy2 = min(py2, fy2)
 
                 if ix2 > ix1 and iy2 > iy1:
-
                     fault_area = (ix2 - ix1) * (iy2 - iy1)
                     loss_fraction = FAULT_LOSS.get(lbl, 0) * (fault_area / panel_area)
                     daily_loss = loss_fraction * SYSTEM_CAPACITY * SUNLIGHT
@@ -187,6 +191,7 @@ class Index(View):
             stored_panel.save()
 
             half = len(panel_faults_json) // 2
+
             panel_analysis_list.append({
                 "panel_number": idx,
                 "faults_left": panel_faults_json[:half],
@@ -207,7 +212,6 @@ class Index(View):
         file_name = f"yolo_output_{uuid.uuid4()}.jpg"
         saved_path = default_storage.save("yolo_outputs/" + file_name, ContentFile(buffer.getvalue()))
 
-        # Create YOLOOutput entry
         yolo_obj = YOLOOutput.objects.create(
             input_image=img_obj,
             image=saved_path,
@@ -216,10 +220,8 @@ class Index(View):
             loss_percentage=round((total_daily_loss / max_possible_energy) * 100, 2)
         )
 
-        # Attach panels to this YOLOOutput
         PanelAnalysis.objects.filter(yolo_output=None).update(yolo_output=yolo_obj)
 
-        # -------------- JSON RESPONSE --------------
         return JsonResponse({
             "message": "Energy Loss Analysis Completed",
             "summary": {
