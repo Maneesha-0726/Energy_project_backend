@@ -44,13 +44,16 @@ from ultralytics import YOLO
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODEL_DIR = os.path.join(BASE_DIR, "models")
 
-print("⚡ Loading YOLO models ONCE...")
+print("⚡ Loading YOLO model (reduced mode)...")
 
 best_model = YOLO(os.path.join(MODEL_DIR, "best.pt"))
-snow_model = YOLO(os.path.join(MODEL_DIR, "snow.pt"))
-panel_model = YOLO(os.path.join(MODEL_DIR, "panel_detect.pt"))
 
-print("✅ YOLO Models Loaded Successfully!")
+# Disable other models to avoid Render memory crash
+snow_model = None
+panel_model = None
+
+print("✅ Loaded only BEST model to reduce RAM usage")
+
 
 
 # ---------------- UTIL: DOWNSCALE IMAGE (RAM SAFE) ----------------
