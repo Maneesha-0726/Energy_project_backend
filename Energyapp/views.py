@@ -4,7 +4,6 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from ultralytics import YOLO
 from PIL import Image
 import uuid
 import io
@@ -44,18 +43,16 @@ def normalize(lbl):
     return mapping.get(lbl, lbl.title())
 
 
-# ----------------------------------------------------
-# LOAD YOLO MODELS
-# ----------------------------------------------------
-best_model = YOLO(r"C:\Users\hp\Downloads\best.pt")
-snow_model = YOLO(r"C:\Users\hp\Downloads\snow.pt")
-panel_model = YOLO(r"C:\Users\hp\Downloads\panel_detect.pt")
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class Index(View):
 
     def post(self, request):
+        from ultralytics import YOLO     # LOAD ONLY WHEN NECESSARY
+
+        # ---------------------- LOAD MODELS ----------------------
+        best_model = YOLO("models/best.pt")
+        snow_model = YOLO("models/snow.pt")
+        panel_model = YOLO("models/panel_detect.pt")
 
         # ---------------------- USER INPUTS ----------------------
         location = request.POST.get("location", "Home")
@@ -116,7 +113,7 @@ class Index(View):
         for b in panel_res.boxes:
             panels.append(list(map(int, b.xyxy[0].tolist())))
 
-        if len(panels) == 0:
+        if not panels:
             panels = [(0, 0, img_w, img_h)]
 
         # ---------------------- ENERGY CALCULATIONS ----------------------
@@ -133,7 +130,6 @@ class Index(View):
 
             for lbl, conf, (fx1, fy1, fx2, fy2) in detections:
 
-                # overlap area
                 ix1 = max(px1, fx1)
                 iy1 = max(py1, fy1)
                 ix2 = min(px2, fx2)
@@ -157,7 +153,6 @@ class Index(View):
 
             total_daily_loss += panel_loss
 
-            # ---- split into left + right for UI ----
             mid = max(1, len(fault_items) // 2)
             faults_left = fault_items[:mid]
             faults_right = fault_items[mid:]
@@ -190,7 +185,6 @@ class Index(View):
             loss_percentage=round((total_daily_loss / max_possible_energy) * 100, 2)
         )
 
-        # SAVE PANEL & FAULT DETAILS
         for panel in panel_analysis_list:
             p_obj = PanelAnalysis.objects.create(
                 yolo_output=yolo_obj,
@@ -208,7 +202,6 @@ class Index(View):
                     daily_loss=f["daily_loss"]
                 )
 
-        # ---------------------- FINAL JSON RESPONSE ----------------------
         return JsonResponse({
             "message": "Energy Loss Analysis Completed",
 
