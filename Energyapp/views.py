@@ -45,7 +45,8 @@ def normalize(lbl):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class Index(View):
-
+    def get(self, request):
+        return JsonResponse({"status": "Backend is live"}, status=200)
     def post(self, request):
         import os
         from ultralytics import YOLO     # LOAD ONLY WHEN NECESSARY
