@@ -4,6 +4,8 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from Energyapp.models import PanelAnalysis
+
 from PIL import Image
 import uuid
 import io
