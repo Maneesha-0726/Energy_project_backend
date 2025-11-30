@@ -4,19 +4,25 @@ from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from Energyapp.models import PanelAnalysis
+
+from Energyapp.models import GrayscaleImage, YOLOOutput, PanelAnalysis, FaultDetail
 
 from PIL import Image
 import uuid
 import io
 import os
 
-from .models import (
-    GrayscaleImage,
-    YOLOOutput,
-    PanelAnalysis,
-    FaultDetail
-)
+# ==============================
+#  LOAD YOLO LAZILY (IMPORTANT)
+# ==============================
+best_model = None
+snow_model = None
+panel_model = None
+
+from ultralytics import YOLO
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_DIR = os.path.join(BASE_DIR, "models")
 
 # ---------------- ENERGY LOSS CONSTANTS ----------------
 FAULT_LOSS = {
@@ -27,6 +33,7 @@ FAULT_LOSS = {
     "Physical Damage": 0.40,
     "Electrical-Damage": 0.55,
 }
+
 
 # ---------------- LABEL NORMALIZATION ----------------
 def normalize(lbl):
@@ -45,21 +52,6 @@ def normalize(lbl):
     return mapping.get(lbl, lbl.title())
 
 
-# ---------------- LOAD YOLO MODELS ONCE ----------------
-from ultralytics import YOLO
-
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-MODEL_DIR = os.path.join(BASE_DIR, "models")
-
-print("⚡ Loading YOLO models...")
-
-best_model = YOLO(os.path.join(MODEL_DIR, "best.pt"))
-snow_model = YOLO(os.path.join(MODEL_DIR, "snow.pt"))
-panel_model = YOLO(os.path.join(MODEL_DIR, "panel_detect.pt"))
-
-print("✅ YOLO Models Loaded\n")
-
-
 # ---------------- MAIN BACKEND VIEW ----------------
 @method_decorator(csrf_exempt, name='dispatch')
 class Index(View):
@@ -69,6 +61,18 @@ class Index(View):
 
     def post(self, request):
         global best_model, snow_model, panel_model
+
+        # ======================================
+        #  LAZY LOAD MODELS (Fix Render crash)
+        # ======================================
+        if best_model is None:
+            best_model = YOLO(os.path.join(MODEL_DIR, "best.pt"))
+
+        if snow_model is None:
+            snow_model = YOLO(os.path.join(MODEL_DIR, "snow.pt"))
+
+        if panel_model is None:
+            panel_model = YOLO(os.path.join(MODEL_DIR, "panel_detect.pt"))
 
         # -------------- READ USER INPUT --------------
         location = request.POST.get("location", "Home")
@@ -139,7 +143,7 @@ class Index(View):
 
             panel_loss = 0
             stored_panel = PanelAnalysis.objects.create(
-                yolo_output=None,  # temporarily None, update later
+                yolo_output=None,
                 panel_number=idx,
                 panel_loss_kwh=0
             )
@@ -147,7 +151,6 @@ class Index(View):
             panel_faults_json = []
             for lbl, conf, (fx1, fy1, fx2, fy2) in detections:
 
-                # intersection
                 ix1 = max(px1, fx1)
                 iy1 = max(py1, fy1)
                 ix2 = min(px2, fx2)
@@ -159,7 +162,6 @@ class Index(View):
                     loss_fraction = FAULT_LOSS.get(lbl, 0) * (fault_area / panel_area)
                     daily_loss = loss_fraction * SYSTEM_CAPACITY * SUNLIGHT
 
-                    # Save fault to DB
                     FaultDetail.objects.create(
                         panel=stored_panel,
                         fault_name=lbl,
@@ -184,10 +186,11 @@ class Index(View):
             stored_panel.panel_loss_kwh = round(panel_loss, 3)
             stored_panel.save()
 
+            half = len(panel_faults_json) // 2
             panel_analysis_list.append({
                 "panel_number": idx,
-                "faults_left": panel_faults_json[:len(panel_faults_json)//2],
-                "faults_right": panel_faults_json[len(panel_faults_json)//2:],
+                "faults_left": panel_faults_json[:half],
+                "faults_right": panel_faults_json[half:],
                 "panel_loss_kwh": round(panel_loss, 3)
             })
 
@@ -213,7 +216,7 @@ class Index(View):
             loss_percentage=round((total_daily_loss / max_possible_energy) * 100, 2)
         )
 
-        # Attach all panel objects to this YOLOOutput
+        # Attach panels to this YOLOOutput
         PanelAnalysis.objects.filter(yolo_output=None).update(yolo_output=yolo_obj)
 
         # -------------- JSON RESPONSE --------------
