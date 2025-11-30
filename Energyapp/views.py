@@ -51,6 +51,7 @@ class Index(View):
         import os
         from ultralytics import YOLO     # LOAD ONLY WHEN NECESSARY
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        PROJECT_DIR = os.path.dirname(BASE_DIR)
         MODEL_DIR = os.path.join(BASE_DIR, "models")
 
         # ---------------------- LOAD MODELS ----------------------
