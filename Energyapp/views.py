@@ -7,13 +7,12 @@ from django.utils.decorators import method_decorator
 from PIL import Image
 import uuid
 import io
+import os
 
 from .models import GrayscaleImage, YOLOOutput, PanelAnalysis, FaultDetail
 
 
-# ----------------------------------------------------
-# ENERGY LOSS CONSTANTS
-# ----------------------------------------------------
+# ---------------- ENERGY LOSS CONSTANTS ----------------
 FAULT_LOSS = {
     "Non-Defective": 0.00,
     "Dusty": 0.12,
@@ -24,9 +23,7 @@ FAULT_LOSS = {
 }
 
 
-# ----------------------------------------------------
-# LABEL NORMALIZATION
-# ----------------------------------------------------
+# ---------------- LABEL NORMALIZATION ----------------
 def normalize(lbl):
     lbl = lbl.strip().lower()
     mapping = {
@@ -43,25 +40,25 @@ def normalize(lbl):
     return mapping.get(lbl, lbl.title())
 
 
+# ---------------- CLASS VIEW ----------------
 @method_decorator(csrf_exempt, name='dispatch')
-def dispatch(self, *args, **kwargs):
-        return super().dispatch(*args, **kwargs)
 class Index(View):
+
     def get(self, request):
         return JsonResponse({"status": "Backend is live"}, status=200)
+
     def post(self, request):
-        import os
-        from ultralytics import YOLO     # LOAD ONLY WHEN NECESSARY
+        from ultralytics import YOLO
+
         BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        PROJECT_DIR = os.path.dirname(BASE_DIR)
         MODEL_DIR = os.path.join(BASE_DIR, "models")
 
-        # ---------------------- LOAD MODELS ----------------------
-        best_model = YOLO(os.path.join(MODEL_DIR,"best.pt"))
-        snow_model = YOLO(os.path.join(MODEL_DIR,"snow.pt"))
-        panel_model = YOLO(os.path.join(MODEL_DIR,"panel_detect.pt"))
+        # LOAD MODELS
+        best_model = YOLO(os.path.join(MODEL_DIR, "best.pt"))
+        snow_model = YOLO(os.path.join(MODEL_DIR, "snow.pt"))
+        panel_model = YOLO(os.path.join(MODEL_DIR, "panel_detect.pt"))
 
-        # ---------------------- USER INPUTS ----------------------
+        # USER INPUTS
         location = request.POST.get("location", "Home")
         capacity = float(request.POST.get("capacity", 5))
         sun_hours = float(request.POST.get("sunHours", 5))
@@ -70,7 +67,7 @@ class Index(View):
         SUNLIGHT = max(sun_hours, 0.1)
         max_possible_energy = SYSTEM_CAPACITY * SUNLIGHT
 
-        # ---------------------- IMAGE VALIDATION ----------------------
+        # IMAGE VALIDATION
         if "greyImage" not in request.FILES:
             return JsonResponse({"error": "No image uploaded"}, status=400)
 
@@ -87,7 +84,7 @@ class Index(View):
         pil = Image.open(image_path).convert("RGB")
         img_w, img_h = pil.size
 
-        # ---------------------- YOLO MAIN MODEL ----------------------
+        # YOLO MAIN MODEL
         best_res = best_model.predict(image_path, conf=0.25, verbose=False)[0]
 
         detections = []
@@ -99,7 +96,7 @@ class Index(View):
 
         meaningful_fault = any(lbl != "Non-Defective" for lbl, _, _ in detections)
 
-        # ---------------------- SNOW FALLBACK ----------------------
+        # SNOW MODEL FALLBACK
         if not meaningful_fault:
             snow_res = snow_model.predict(image_path, conf=0.20, verbose=False)[0]
             detections = []
@@ -113,17 +110,13 @@ class Index(View):
         else:
             final_res = best_res
 
-        # ---------------------- PANEL DETECTION ----------------------
+        # PANEL DETECTION
         panel_res = panel_model.predict(image_path, conf=0.20, verbose=False)[0]
-
-        panels = []
-        for b in panel_res.boxes:
-            panels.append(list(map(int, b.xyxy[0].tolist())))
+        panels = [list(map(int, b.xyxy[0].tolist())) for b in panel_res.boxes]
 
         if not panels:
             panels = [(0, 0, img_w, img_h)]
 
-        # ---------------------- ENERGY CALCULATIONS ----------------------
         total_daily_loss = 0
         panel_analysis_list = []
 
@@ -173,7 +166,7 @@ class Index(View):
 
         final_energy = max(max_possible_energy - total_daily_loss, 0)
 
-        # ---------------------- SAVE OUTPUT IMAGE ----------------------
+        # SAVE OUTPUT IMAGE
         annotated = final_res.plot()
         pil_img = Image.fromarray(annotated)
 
@@ -192,26 +185,8 @@ class Index(View):
             loss_percentage=round((total_daily_loss / max_possible_energy) * 100, 2)
         )
 
-        for panel in panel_analysis_list:
-            p_obj = PanelAnalysis.objects.create(
-                yolo_output=yolo_obj,
-                panel_number=panel["panel_number"],
-                panel_loss_kwh=panel["panel_loss_kwh"]
-            )
-
-            for f in panel["faults_left"] + panel["faults_right"]:
-                FaultDetail.objects.create(
-                    panel=p_obj,
-                    fault_name=f["fault"],
-                    confidence=f["confidence"],
-                    affected_area=f["affected_area"],
-                    loss_percentage=f["loss_percentage"],
-                    daily_loss=f["daily_loss"]
-                )
-
         return JsonResponse({
             "message": "Energy Loss Analysis Completed",
-
             "summary": {
                 "location": location,
                 "total_panels": len(panels),
@@ -223,9 +198,7 @@ class Index(View):
                 "overall_loss_percentage":
                     round((total_daily_loss / max_possible_energy) * 100, 2),
             },
-
             "panel_analysis": panel_analysis_list,
-
             "download_url": yolo_obj.image.url,
             "file_name": file_name
         })
