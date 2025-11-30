@@ -28,7 +28,12 @@ SECRET_KEY = 'django-insecure-aj-6(uu#j(b8=h=%%8!j+q1latw3nm)x=igecm*d3=g_ktm*t_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "energy-project-backend-ol3t.onrender.com",
+    "localhost",
+    "127.0.0.1",
+    "*"
+]
 
 
 # Application definition
