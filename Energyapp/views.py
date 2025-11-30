@@ -47,12 +47,15 @@ def normalize(lbl):
 class Index(View):
 
     def post(self, request):
+        import os
         from ultralytics import YOLO     # LOAD ONLY WHEN NECESSARY
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        MODEL_DIR = os.path.join(BASE_DIR, "models")
 
         # ---------------------- LOAD MODELS ----------------------
-        best_model = YOLO("models/best.pt")
-        snow_model = YOLO("models/snow.pt")
-        panel_model = YOLO("models/panel_detect.pt")
+        best_model = YOLO(os.path.join(MODEL_DIR,"best.pt"))
+        snow_model = YOLO(os.path.join(MODEL_DIR,"snow.pt"))
+        panel_model = YOLO(os.path.join(MODEL_DIR,"panel_detect.pt"))
 
         # ---------------------- USER INPUTS ----------------------
         location = request.POST.get("location", "Home")
