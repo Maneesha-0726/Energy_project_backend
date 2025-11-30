@@ -4,7 +4,6 @@ import os
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = "django-secret"
-
 DEBUG = False
 
 ALLOWED_HOSTS = [
@@ -36,7 +35,7 @@ MIDDLEWARE = [
 
     "django.middleware.security.SecurityMiddleware",
     "whitenoise.middleware.WhiteNoiseMiddleware",
-
+    
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -77,39 +76,20 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-# ---------------------------------------------------
-# 🔥 FINAL WORKING CORS CONFIGURATION (Render + Vercel)
-# ---------------------------------------------------
+# ---------------- CORS FIX ----------------
+CORS_ALLOW_ALL_ORIGINS = False
 
-CORS_ALLOW_ALL_ORIGINS = True      # Allow all origins (required for file upload)
-CORS_ALLOW_CREDENTIALS = False     # Render free tier does not support credentials
-
-# Do NOT use CORS_ALLOWED_ORIGINS when CORS_ALLOW_ALL_ORIGINS=True
-CORS_ALLOWED_ORIGINS = []
+CORS_ALLOWED_ORIGINS = [
+    "https://energy-project-frontend.vercel.app",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://energy-project-frontend.vercel.app",
     "https://energy-project-backend-ol3t.onrender.com",
 ]
 
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-]
-
-CORS_ALLOW_METHODS = [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS",
-]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_HEADERS = ["*"]
+CORS_ALLOW_METHODS = ["*"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
