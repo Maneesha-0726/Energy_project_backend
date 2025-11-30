@@ -43,11 +43,11 @@ INSTALLED_APPS = [
 ]
 
 # ---------------------------------------------------
-# MIDDLEWARE (CORS must come first!)
+# MIDDLEWARE (CORS MUST COME FIRST)
 # ---------------------------------------------------
 
 MIDDLEWARE = [
-    "corsheaders.middleware.CorsMiddleware",
+    "corsheaders.middleware.CorsMiddleware",     # MUST BE FIRST
     "django.middleware.common.CommonMiddleware",
 
     'django.middleware.security.SecurityMiddleware',
@@ -125,23 +125,34 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Allow Whitenoise to serve static files
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 # ---------------------------------------------------
-# CORS / CSRF CONFIG
+# CORS / CSRF CONFIG (RENDER + VERCEL FIX)
 # ---------------------------------------------------
 
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = False   # DO NOT USE * ON RENDER
 
-# If you want to specify exact domains instead of allow_all:
-# CORS_ALLOWED_ORIGINS = [
-#     "https://energy-project-frontend.vercel.app",
-# ]
+CORS_ALLOWED_ORIGINS = [
+    "https://energy-project-frontend.vercel.app",
+]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://energy-project-frontend.vercel.app",
     "https://energy-project-backend-ol3t.onrender.com",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
 
 CORS_ALLOW_METHODS = [
