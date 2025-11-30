@@ -44,6 +44,8 @@ def normalize(lbl):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+def dispatch(self, *args, **kwargs):
+        return super().dispatch(*args, **kwargs)
 class Index(View):
     def get(self, request):
         return JsonResponse({"status": "Backend is live"}, status=200)
