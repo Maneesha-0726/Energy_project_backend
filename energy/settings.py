@@ -111,7 +111,7 @@ CORS_ALLOW_CREDENTIALS = True
 # Allow common headers
 CORS_ALLOW_HEADERS = ["*"]
 CORS_ALLOW_METHODS = ["*"]
-CORS_ALLOW_ORIGINS =["*"]
+CORS_ALLOW_ORIGINS_ALL =["*"]
 # Allow all methods
 CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
 
