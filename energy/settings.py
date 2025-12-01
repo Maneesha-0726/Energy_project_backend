@@ -5,23 +5,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = "django-secret"
 
-# ---------------------------
-# PRODUCTION MODE
-# ---------------------------
-DEBUG = False
+# -----------------------------------
+# ✔ DEVELOPMENT MODE
+# -----------------------------------
+DEBUG = True
 
-ALLOWED_HOSTS = [
-    "energy-project-backend-ol3t.onrender.com",
-    "energy-project-frontend.vercel.app",
-    ".onrender.com",
-    ".vercel.app",
-    "localhost",
-    "127.0.0.1",
-]
+ALLOWED_HOSTS = ["*", "localhost", "127.0.0.1"]
 
-# ---------------------------
+# -----------------------------------
 # INSTALLED APPS
-# ---------------------------
+# -----------------------------------
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -36,11 +29,10 @@ INSTALLED_APPS = [
     "Energyapp",
 ]
 
-# ---------------------------
+# -----------------------------------
 # MIDDLEWARE
-# ---------------------------
+# -----------------------------------
 MIDDLEWARE = [
-    # ⭐ MUST BE AT TOP FOR CORS TO WORK
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
 
@@ -56,9 +48,9 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "energy.urls"
 
-# ---------------------------
+# -----------------------------------
 # TEMPLATES
-# ---------------------------
+# -----------------------------------
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -77,9 +69,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "energy.wsgi.application"
 
-# ---------------------------
+# -----------------------------------
 # DATABASE
-# ---------------------------
+# -----------------------------------
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -87,55 +79,40 @@ DATABASES = {
     }
 }
 
-# ---------------------------
+# -----------------------------------
 # STATIC & MEDIA
-# ---------------------------
+# -----------------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedStaticFilesStorage"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
-# ============================================================
-# 🔥 CORS & CSRF — FINAL FIX FOR RENDER + VERCEL CONNECTION
-# ============================================================
+# =====================================================
+# ✔ CORS + CSRF FOR LOCAL DEVELOPMENT
+# =====================================================
 
-# Allow all origins (this is required for ML/YOLO file uploads)
+# Allow all origins in development
 CORS_ALLOW_ALL_ORIGINS = True
 
-# Render free tier does not require credentials
-CORS_ALLOW_CREDENTIALS = False
+# Explicitly allow React dev server
+CORS_ALLOWED_ORIGINS = [
+    "https://energy-project-frontend.vercel.app",
+]
 
-# Trusted origins for CSRF (Vercel + Render)
 CSRF_TRUSTED_ORIGINS = [
     "https://energy-project-frontend.vercel.app",
-    "https://energy-project-backend-ol3t.onrender.com",
 ]
 
-# Allow headers
-CORS_ALLOW_HEADERS = [
-    "accept",
-    "accept-encoding",
-    "authorization",
-    "content-type",
-    "origin",
-    "user-agent",
-    "x-csrftoken",
-    "x-requested-with",
-]
+CORS_ALLOW_CREDENTIALS = True
 
-# Allow methods
-CORS_ALLOW_METHODS = [
-    "GET",
-    "POST",
-    "PUT",
-    "PATCH",
-    "DELETE",
-    "OPTIONS",
-]
+# Allow common headers
+CORS_ALLOW_HEADERS = ["*"]
+CORS_ALLOW_METHODS = ["*"]
 
-# ---------------------------
-# DEFAULT
-# ---------------------------
+# Allow all methods
+CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
