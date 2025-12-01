@@ -99,7 +99,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 # =====================================================
 
 # Allow all origins in development
-# CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Explicitly allow React dev server
 CORS_ALLOWED_ORIGINS = [
@@ -115,8 +115,8 @@ CORS_ALLOW_CREDENTIALS = False
 # Allow common headers
 CORS_ALLOW_HEADERS = ["*"]
 CORS_ALLOW_METHODS = ["*"]
-# CORS_ALLOW_ORIGINS_ALL =["*"]
+CORS_ALLOW_ORIGINS_ALL =["*"]
 # Allow all methods
-# CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
+CORS_ALLOW_METHODS = ["DELETE", "GET", "OPTIONS", "PATCH", "POST", "PUT"]
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
